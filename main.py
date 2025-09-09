@@ -5,7 +5,6 @@ import asyncio
 
 from models.article import NewsResponse, Article
 from services.aggregator import ArticleAggregator
-from utils.cache import cache_manager
 from utils.rate_limiter import apply_rate_limit
 from config.settings import settings
 
@@ -37,12 +36,10 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "services": {
-            "cache": cache_manager.enabled,
             "rate_limiting": True
         },
         "configuration": {
             "max_articles": settings.total_articles,
-            "cache_ttl": settings.cache_ttl,
             "rate_limit": f"{settings.rate_limit_requests} requests per {settings.rate_limit_period} seconds"
         }
     }
@@ -66,25 +63,9 @@ async def get_ai_news(request: Request, _: bool = Depends(apply_rate_limit)):
     - Total count and sources used
     
     **Rate Limiting:** 100 requests per hour per IP
-    **Caching:** Responses are cached for 5 minutes for optimal performance
     """
     
     try:
-        # Generate cache key
-        cache_key = cache_manager.generate_cache_key("ai_news", timestamp=datetime.now().strftime("%Y%m%d%H%M"))
-        
-        # Try to get from cache first
-        cached_response = cache_manager.get(cache_key)
-        if cached_response:
-            # Convert cached data back to proper format
-            articles = [Article(**article) for article in cached_response["articles"]]
-            return NewsResponse(
-                articles=articles,
-                total_count=cached_response["total_count"],
-                sources_used=cached_response["sources_used"],
-                last_updated=datetime.fromisoformat(cached_response["last_updated"])
-            )
-        
         # Fetch fresh data
         articles = await aggregator.get_trending_ai_news()
         
@@ -105,15 +86,6 @@ async def get_ai_news(request: Request, _: bool = Depends(apply_rate_limit)):
             sources_used=sources_used,
             last_updated=datetime.now()
         )
-        
-        # Cache the response (convert to dict for JSON serialization)
-        cache_data = {
-            "articles": [article.dict() for article in articles],
-            "total_count": len(articles),
-            "sources_used": sources_used,
-            "last_updated": datetime.now().isoformat()
-        }
-        cache_manager.set(cache_key, cache_data)
         
         return response
         
@@ -161,20 +133,6 @@ async def get_sources():
         }
     }
 
-@app.post("/cache/clear", summary="Clear Cache")
-async def clear_cache(request: Request, _: bool = Depends(apply_rate_limit)):
-    """Clear all cached responses (admin function)"""
-    try:
-        success = cache_manager.clear_all()
-        if success:
-            return {"message": "Cache cleared successfully"}
-        else:
-            return {"message": "Cache clear failed or cache is disabled"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error clearing cache: {str(e)}"
-        )
 
 # Add middleware for CORS if needed
 from fastapi.middleware.cors import CORSMiddleware

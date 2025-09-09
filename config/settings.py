@@ -11,16 +11,6 @@ class Settings(BaseSettings):
     # NewsAPI Configuration
     newsapi_key: str
     
-    # Redis Configuration (optional)
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-    redis_db: int = 0
-    redis_password: Optional[str] = None
-    
-    # Cache Configuration
-    cache_ttl: int = 300  # 5 minutes
-    enable_cache: bool = True
-    
     # Rate Limiting
     rate_limit_requests: int = 100
     rate_limit_period: int = 3600  # 1 hour
