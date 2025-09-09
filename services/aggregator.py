@@ -2,14 +2,12 @@ import asyncio
 from typing import List
 from datetime import datetime
 from models.article import Article
-from services.reddit_service import RedditService
 from services.hackernews_service import HackerNewsService
 from services.newsapi_service import NewsAPIService
 from config.settings import settings
 
 class ArticleAggregator:
     def __init__(self):
-        self.reddit_service = RedditService()
         self.hackernews_service = HackerNewsService()
         self.newsapi_service = NewsAPIService()
     
@@ -17,29 +15,17 @@ class ArticleAggregator:
         """Aggregate AI news from all sources and return top 20 articles"""
         
         # Check if we're in test mode or missing credentials
-        if (not settings.reddit_client_id or 
-            not settings.newsapi_key or
-            settings.reddit_client_id == "test_client_id" or 
+        if (not settings.newsapi_key or
             settings.newsapi_key == "test_api_key"):
             print("Using mock articles due to missing or test credentials")
             return self._get_mock_articles()
         
         # Create tasks with individual timeout protection
-        async def safe_reddit_fetch():
-            try:
-                return await asyncio.wait_for(
-                    self.reddit_service.fetch_ai_news(limit=7), 
-                    timeout=8.0
-                )
-            except Exception as e:
-                print(f"Reddit service failed: {e}")
-                return []
-        
         async def safe_hn_fetch():
             try:
                 async with self.hackernews_service:
                     return await asyncio.wait_for(
-                        self.hackernews_service.fetch_ai_news(limit=7), 
+                        self.hackernews_service.fetch_ai_news(limit=10), 
                         timeout=8.0
                     )
             except Exception as e:
@@ -50,7 +36,7 @@ class ArticleAggregator:
             try:
                 async with self.newsapi_service:
                     return await asyncio.wait_for(
-                        self.newsapi_service.fetch_ai_news(limit=6), 
+                        self.newsapi_service.fetch_ai_news(limit=10), 
                         timeout=8.0
                     )
             except Exception as e:
@@ -58,9 +44,8 @@ class ArticleAggregator:
                 return []
         
         try:
-            # Fetch articles from all sources concurrently with individual error handling
-            reddit_articles, hn_articles, news_articles = await asyncio.gather(
-                safe_reddit_fetch(),
+            # Fetch articles from Hacker News and NewsAPI concurrently with individual error handling
+            hn_articles, news_articles = await asyncio.gather(
                 safe_hn_fetch(), 
                 safe_news_fetch(),
                 return_exceptions=True
@@ -68,12 +53,6 @@ class ArticleAggregator:
             
             # Collect all successful results
             all_articles = []
-            
-            if isinstance(reddit_articles, list):
-                all_articles.extend(reddit_articles)
-                print(f"Reddit: {len(reddit_articles)} articles")
-            else:
-                print(f"Reddit service error: {reddit_articles}")
             
             if isinstance(hn_articles, list):
                 all_articles.extend(hn_articles)
@@ -205,20 +184,11 @@ class ArticleAggregator:
     def _calculate_source_score(self, article: Article) -> int:
         """Calculate score based on source credibility and community engagement"""
         source_scores = {
-            "reddit": 70,      # High community engagement
             "hackernews": 85,  # High-quality tech discussions
             "newsapi": 60      # Mainstream coverage
         }
         
         base_source_score = source_scores.get(article.source, 50)
-        
-        # Bonus for specific high-quality subreddits or sources
-        if article.source == "reddit":
-            # Check if it's from a high-quality AI subreddit
-            quality_subreddits = ["MachineLearning", "artificial", "deeplearning"]
-            # We'd need to track subreddit info to do this properly
-            # For now, give a base score
-            pass
         
         return base_source_score
     
@@ -235,24 +205,11 @@ class ArticleAggregator:
                 title="OpenAI Announces GPT-5 with Revolutionary Multimodal Capabilities",
                 description="OpenAI has unveiled GPT-5, featuring groundbreaking advances in multimodal AI that can seamlessly process text, images, audio, and video in real-time.",
                 url="https://openai.com/blog/gpt-5-announcement",
-                source="reddit",
+                source="newsapi",
                 score=2847,
-                comments=[
-                    Comment(
-                        author="ai_researcher_2024",
-                        content="This is absolutely incredible! The multimodal capabilities shown in the demo are beyond anything we've seen before. The way it can analyze complex videos and provide detailed insights is game-changing.",
-                        score=156,
-                        created_utc=datetime.now()
-                    ),
-                    Comment(
-                        author="tech_enthusiast",
-                        content="Finally! This is what we've been waiting for. The integration between different modalities seems seamless.",
-                        score=89,
-                        created_utc=datetime.now()
-                    )
-                ],
+                comments=[],
                 published_at=datetime.now(),
-                source_id="mock_reddit_1"
+                source_id="mock_news_1"
             ),
             Article(
                 title="Google DeepMind's New AI Model Achieves AGI Breakthrough in Scientific Discovery",
@@ -279,13 +236,13 @@ class ArticleAggregator:
                 score=1456,
                 comments=[],
                 published_at=datetime.now(),
-                source_id="mock_news_1"
+                source_id="mock_news_2"
             ),
             Article(
                 title="Anthropic's Claude 3.5 Shows Unprecedented Reasoning Capabilities",
                 description="Anthropic has unveiled Claude 3.5, demonstrating human-level performance in complex reasoning tasks and ethical decision-making scenarios.",
                 url="https://anthropic.com/claude-3-5",
-                source="reddit",
+                source="hackernews",
                 score=1789,
                 comments=[
                     Comment(
@@ -296,7 +253,7 @@ class ArticleAggregator:
                     )
                 ],
                 published_at=datetime.now(),
-                source_id="mock_reddit_2"
+                source_id="mock_hn_2"
             ),
             Article(
                 title="Microsoft Copilot Integration Transforms Enterprise Productivity",
@@ -306,7 +263,7 @@ class ArticleAggregator:
                 score=987,
                 comments=[],
                 published_at=datetime.now(),
-                source_id="mock_news_2"
+                source_id="mock_news_3"
             ),
             Article(
                 title="AI Chip Wars: NVIDIA's H200 vs AMD's MI300X Performance Analysis",
@@ -323,7 +280,7 @@ class ArticleAggregator:
                     )
                 ],
                 published_at=datetime.now(),
-                source_id="mock_hn_2"
+                source_id="mock_hn_3"
             )
         ]
         
@@ -350,7 +307,7 @@ class ArticleAggregator:
                 title=title,
                 description=f"Advanced AI development in {title.lower()} showcases the rapidly evolving landscape of artificial intelligence technology.",
                 url=f"https://example.com/ai-news-{i+7}",
-                source=["reddit", "hackernews", "newsapi"][i % 3],
+                source=["hackernews", "newsapi"][i % 2],
                 score=500 + i * 50,
                 comments=[
                     Comment(
