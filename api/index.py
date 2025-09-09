@@ -11,5 +11,5 @@ from main import app
 # Vercel expects the app to be available as 'app' variable
 # The main.py already exports the FastAPI app, so we just import it
 
-# Export for Vercel
+# Export for Vercel - both 'app' and 'handler' for compatibility
 handler = app
