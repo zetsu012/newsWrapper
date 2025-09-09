@@ -9,6 +9,7 @@ class NewsAPIService:
         self.base_url = "https://newsapi.org/v2"
         self.api_key = settings.newsapi_key
         self.session = None
+        self.has_credentials = bool(settings.newsapi_key)
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -20,6 +21,11 @@ class NewsAPIService:
     
     async def fetch_ai_news(self, limit: int = 6) -> List[Article]:
         """Fetch AI-related news from NewsAPI"""
+        # Return empty list if no credentials
+        if not self.has_credentials:
+            print("NewsAPI credentials not available, skipping NewsAPI service")
+            return []
+            
         if not self.session:
             self.session = aiohttp.ClientSession()
             

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
+from mangum import Mangum
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,4 +13,4 @@ from main import app
 # The main.py already exports the FastAPI app, so we just import it
 
 # Export for Vercel - both 'app' and 'handler' for compatibility
-handler = app
+handler = Mangum(app)

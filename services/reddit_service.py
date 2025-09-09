@@ -6,14 +6,25 @@ from config.settings import settings
 
 class RedditService:
     def __init__(self):
-        self.reddit = asyncpraw.Reddit(
-            client_id=settings.reddit_client_id,
-            client_secret=settings.reddit_client_secret,
-            user_agent=settings.reddit_user_agent
-        )
+        # Check if credentials are available
+        if settings.reddit_client_id and settings.reddit_client_secret:
+            self.reddit = asyncpraw.Reddit(
+                client_id=settings.reddit_client_id,
+                client_secret=settings.reddit_client_secret,
+                user_agent=settings.reddit_user_agent
+            )
+            self.use_mock_data = False
+        else:
+            self.reddit = None
+            self.use_mock_data = True
     
     async def fetch_ai_news(self, limit: int = 7) -> List[Article]:
         """Fetch AI news from specified subreddits"""
+        # Return empty list if no credentials
+        if self.use_mock_data or not self.reddit:
+            print("Reddit credentials not available, skipping Reddit service")
+            return []
+            
         articles = []
         
         for subreddit_name in settings.ai_subreddits:
