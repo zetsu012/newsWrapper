@@ -41,9 +41,20 @@ class Settings(BaseSettings):
         "ChatGPT"
     ]
     
+    # Redis Configuration (optional for caching)
+    redis_host: Optional[str] = None
+    redis_port: Optional[int] = None
+    redis_db: Optional[int] = None
+    redis_password: Optional[str] = None
+    
+    # Cache Configuration
+    cache_ttl: Optional[int] = None
+    enable_cache: Optional[bool] = None
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Allow extra fields to be ignored
 
 
 # Global settings instance
