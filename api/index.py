@@ -11,7 +11,7 @@ from config.settings import settings
 # Initialize FastAPI app
 app = FastAPI(
     title="AI News Aggregator",
-    description="A comprehensive API that aggregates trending AI news from Reddit, Hacker News, and NewsAPI",
+    description="A comprehensive API that aggregates trending AI news from Hacker News and NewsAPI",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -50,7 +50,6 @@ async def get_ai_news(request: Request, _: bool = Depends(apply_rate_limit)):
     Get the top 20 trending AI news articles aggregated from multiple sources.
     
     This endpoint aggregates AI news from:
-    - Reddit (AI-focused subreddits with community discussions)
     - Hacker News (technical discussions and insights)
     - NewsAPI (mainstream tech publications)
     
@@ -107,12 +106,6 @@ async def get_sources():
     return {
         "sources": [
             {
-                "name": "reddit",
-                "description": "AI-focused subreddits with community discussions",
-                "subreddits": settings.ai_subreddits,
-                "provides": ["comments", "upvotes", "community_insights"]
-            },
-            {
                 "name": "hackernews",
                 "description": "Technical discussions and startup insights",
                 "website": "https://news.ycombinator.com",
@@ -127,9 +120,8 @@ async def get_sources():
         ],
         "total_target_articles": settings.total_articles,
         "distribution": {
-            "reddit": 7,
-            "hackernews": 7,
-            "newsapi": 6
+            "hackernews": 10,
+            "newsapi": 10
         }
     }
 
